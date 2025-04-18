@@ -3,6 +3,8 @@ package websockethandler
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -42,6 +44,7 @@ type WsHandler interface {
 	Handle(meta WsFunc, f HandlerFunc, parent ...HandlerFunc) WsHandler
 	CallFunc(ctx context.Context, meta WsFunc, data WsFuncData) (WsFuncData, error)
 	CallPipelineFunc(ctx context.Context, meta WsFunc, data WsFuncData, ch chan MessagePayload) error
+	AddLogger(logger stdLogger) WsHandler
 	SetLogLevel(level string) WsHandler
 	GetError() error
 }
@@ -57,7 +60,8 @@ type wsHandler struct {
 	err      error
 }
 
-func NewHandler(logger stdLogger) WsHandler {
+func NewHandler() WsHandler {
+	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
 	handler := &wsHandler{
 		fun:      make(map[WsFunc]HandlerFunc),
 		funcTree: make(map[string]*wsHandlerTree),
@@ -86,6 +90,13 @@ func (h *wsHandler) log(lvl level, event error, data ...interface{}) {
 
 func (h *wsHandler) GetError() error {
 	return h.err
+}
+
+func (h *wsHandler) AddLogger(logger stdLogger) WsHandler {
+	if h.err == nil {
+		h.logger = logger
+	}
+	return h
 }
 
 // Setting the logging level
